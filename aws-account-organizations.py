@@ -1,10 +1,25 @@
 import boto3
+import argparse
 
-S3_BUCKET_NAME=""
-AWS_ACCESS_KEY_ID=""
-AWS_SECRET_ACCESS_KEY=""
-ROLE_NAME=""
+parser = argparse.ArgumentParser(prog='single-aws-account-tester.py')
+parser.add_argument('accessKey', help='Your AWS access key id')
+parser.add_argument('secretKey', help='Your AWS access secret key')
+parser.add_argument('bucketName', help='Your AWS S3 Bucket name')
+parser.add_argument('roleName', help='Your AWS S3 Bucket name')
+args = parser.parse_args()
 
+S3_BUCKET_NAME=args.bucketName
+AWS_ACCESS_KEY_ID=args.accessKey
+AWS_SECRET_ACCESS_KEY=args.secretKey
+ROLE_NAME=args.roleName
+
+print ("== AWS CREDENTIALS ARE ==")
+
+print (" [ INFO ] AWS ACCESS KEY ID IS " + AWS_ACCESS_KEY_ID)
+print (" [ INFO ] AWS SECRET ACCESS KEY IS " + AWS_SECRET_ACCESS_KEY)
+print (" [ INFO ] S3 BUCKET NAME IS " + S3_BUCKET_NAME)
+print (" [ INFO ] ROLE NAME IS " + ROLE_NAME)
+  
 role_assumption_arn = 'arn:aws:iam::%s:role/'+ROLE_NAME
 
 service_calls_to_test = {
@@ -56,8 +71,6 @@ for organisation in organisations['Accounts']:
         role_arn = role_assumption_arn % organisation['Id']
         sts_session = sts_client.assume_role(RoleArn=role_arn, RoleSessionName="CloudAdminRoleAssumption")
         print ("[ PASSED ] STS Assume for account " + role_arn)
-        #Perfect let's just go through each necessary vertical and make sure that we can do a describe or list
-        #EC2
 
         aws_access_key = sts_session["Credentials"]["AccessKeyId"]
         aws_access_secret_key = sts_session["Credentials"]["SecretAccessKey"]
@@ -65,6 +78,7 @@ for organisation in organisations['Accounts']:
 
         for service in service_calls_to_test.keys():
             client = boto3.client(  service,
+                                    region_name='us-east-1',
                                     aws_access_key_id=aws_access_key,
                                     aws_secret_access_key=aws_access_secret_key,
                                     aws_session_token=session_token
