@@ -10,12 +10,12 @@ except ModuleNotFoundError:
     print(' [ INFO ] Boto3 module required. Please install boto3 in your system: `{} install boto3`.'.format('pip3' if is_python3 else 'pip'))
     exit(1)
 
-parser = argparse.ArgumentParser(prog='validate_s3.py')
-parser.add_argument('-a', type=str, dest='accessKey', help='Your AWS access key id')
-parser.add_argument('-s', type=str, dest='secretKey', help='Your AWS access secret key')
-parser.add_argument('-b', type=str, dest='bucketName', help='Your AWS S3 Bucket name')
-parser.add_argument('-p', type=str, dest='bucketPrefix', default=None, help='Your AWS S3 Bucket prefix')
-parser.add_argument('-r', type=str, dest='roleArn', default=None, help='Your AWS role arn in case of assuming a role (optional)')
+parser = argparse.ArgumentParser(prog='aws-s3.py')
+parser.add_argument('--access-key', type=str, dest='accessKey', help='Your AWS access key id')
+parser.add_argument('--secret-key', type=str, dest='secretKey', help='Your AWS access secret key')
+parser.add_argument('--bucket-name', type=str, dest='bucketName', help='Your AWS S3 Bucket name')
+parser.add_argument('--bucket-prefix', type=str, dest='bucketPrefix', default=None, help='Your AWS S3 Bucket prefix')
+parser.add_argument('--role-arn', type=str, dest='roleArn', default=None, help='Your AWS role arn in case of assuming a role (optional)')
 args = parser.parse_args()
 
 s3_bucket_name = args.bucketName
