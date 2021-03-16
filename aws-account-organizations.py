@@ -1,11 +1,19 @@
-import boto3
 import argparse
+import sys
+
+is_python3 = sys.version_info[0] >= 3
+
+try:
+    import boto3
+except ModuleNotFoundError:
+    print(' [ INFO ] Boto3 module required. Please install boto3 in your system: `{} install boto3`.'.format('pip3' if is_python3 else 'pip'))
+    exit(1)
 
 parser = argparse.ArgumentParser(prog='single-aws-account-tester.py')
-parser.add_argument('accessKey', help='Your AWS access key id')
-parser.add_argument('secretKey', help='Your AWS access secret key')
-parser.add_argument('bucketName', help='Your AWS S3 Bucket name')
-parser.add_argument('roleName', help='Your AWS S3 Bucket name')
+parser.add_argument('--access-key', 'accessKey', help='Your AWS access key id')
+parser.add_argument('--secret-key', 'secretKey', help='Your AWS access secret key')
+parser.add_argument('--bucket-name', 'bucketName', help='Your AWS S3 Bucket name')
+parser.add_argument('--role-name', 'roleName', help='Your AWS S3 Bucket name')
 args = parser.parse_args()
 
 S3_BUCKET_NAME=args.bucketName

@@ -16,7 +16,7 @@ except ImportError:
     print(' [ INFO ] azure-storage-blob version 2.0.1 is required. Please install: `{} install azure-storage-blob==2.0.1`.'.format('pip3' if is_python3 else 'pip'))
     exit(1)
 
-parser = argparse.ArgumentParser(prog='validate_azure_storage.py')
+parser = argparse.ArgumentParser(prog='azure-storage.py')
 parser.add_argument('--bucket-name', type=str, dest='bucketName', help='Your Azure Bucket name')
 parser.add_argument('--bucket-key', type=str, dest='bucketKey', help='Your Azure Bucket key string')
 args = parser.parse_args()
