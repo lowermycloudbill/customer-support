@@ -1,0 +1,52 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Metadata:
+  License: Apache-2.0
+Description: 'CloudAdmin To Fill IN!!!!'
+Resources:
+  CFNUser:
+    Type: AWS::IAM::User
+  CFNUserGroup:
+    Type: AWS::IAM::Group
+  CFNAdminGroup:
+    Type: AWS::IAM::Group
+  Users:
+    Type: AWS::IAM::UserToGroupAddition
+    Properties:
+      GroupName: !Ref 'CFNUserGroup'
+      Users: [!Ref 'CFNUser']
+  Admins:
+    Type: AWS::IAM::UserToGroupAddition
+    Properties:
+      GroupName: !Ref 'CFNAdminGroup'
+      Users: [!Ref 'CFNUser']
+  CFNUserPolicies:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: CFNUsers
+      PolicyDocument:
+        Statement:
+        - Effect: Allow
+          Action: ['cloudformation:Describe*', 'cloudformation:List*', 'cloudformation:Get*']
+          Resource: '*'
+      Groups: [!Ref 'CFNUserGroup']
+  CFNAdminPolicies:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: CFNAdmins
+      PolicyDocument:
+        Statement:
+        - Effect: Allow
+          Action: cloudformation:*
+          Resource: '*'
+      Groups: [!Ref 'CFNAdminGroup']
+  CFNKeys:
+    Type: AWS::IAM::AccessKey
+    Properties:
+      UserName: !Ref 'CFNUser'
+Outputs:
+  AccessKey:
+    Value: !Ref 'CFNKeys'
+    Description: AWSAccessKeyId of new user
+  SecretKey:
+    Value: !GetAtt [CFNKeys, SecretAccessKey]
+    Description: AWSSecretAccessKey of new user
