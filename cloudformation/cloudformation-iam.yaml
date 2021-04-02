@@ -3,50 +3,27 @@ Metadata:
   License: Apache-2.0
 Description: 'CloudAdmin To Fill IN!!!!'
 Resources:
-  CFNUser:
+  CloudAdminUser:
     Type: AWS::IAM::User
-  CFNUserGroup:
-    Type: AWS::IAM::Group
-  CFNAdminGroup:
-    Type: AWS::IAM::Group
-  Users:
-    Type: AWS::IAM::UserToGroupAddition
-    Properties:
-      GroupName: !Ref 'CFNUserGroup'
-      Users: [!Ref 'CFNUser']
-  Admins:
-    Type: AWS::IAM::UserToGroupAddition
-    Properties:
-      GroupName: !Ref 'CFNAdminGroup'
-      Users: [!Ref 'CFNUser']
-  CFNUserPolicies:
+  CloudAdminPolicies:
     Type: AWS::IAM::Policy
     Properties:
-      PolicyName: CFNUsers
+      PolicyName: CloudAdminPolicy
       PolicyDocument:
         Statement:
         - Effect: Allow
-          Action: ['cloudformation:Describe*', 'cloudformation:List*', 'cloudformation:Get*']
+          Action: ["aws-portal:ViewBilling","aws-portal:ViewUsage","autoscaling:Describe*","cloudwatch:Describe*","cloudwatch:Get*","cloudwatch:List*","ec2:Describe*","elasticache:Describe*","elasticache:ListTagsForResource","elasticloadbalancing:Describe*","redshift:Describe*","route53:Get*","route53:List*","rds:Describe*","rds:ListTagsForResource","ec2:DescribeAccountAttributes","ec2:DescribeAvailabilityZones","ec2:DescribeInternetGateways","ec2:DescribeSecurityGroups","ec2:DescribeSubnets","ec2:DescribeVpcAttribute","ec2:DescribeVpcs","cloudwatch:GetMetricStatistics","logs:DescribeLogStreams","logs:GetLogEvents","es:DescribeReservedElasticsearchInstanceOfferings","es:ListElasticsearchInstanceTypeDetails","es:ESHttpGet","es:ListTags","es:DescribeElasticsearchDomainConfig","es:GetUpgradeHistory","es:ESCrossClusterGet","es:DescribeInboundCrossClusterSearchConnections","es:DescribeReservedElasticsearchInstances","es:ESHttpHead","es:ListDomainNames","es:DescribeElasticsearchDomain","es:GetCompatibleElasticsearchVersions","es:GetUpgradeStatus","es:DescribeElasticsearchDomains","es:ListElasticsearchInstanceTypes","es:DescribeOutboundCrossClusterSearchConnections","es:ListElasticsearchVersions","es:DescribeElasticsearchInstanceTypeLimits"]
           Resource: '*'
-      Groups: [!Ref 'CFNUserGroup']
-  CFNAdminPolicies:
-    Type: AWS::IAM::Policy
-    Properties:
-      PolicyName: CFNAdmins
-      PolicyDocument:
-        Statement:
-        - Effect: Allow
-          Action: cloudformation:*
-          Resource: '*'
-      Groups: [!Ref 'CFNAdminGroup']
-  CFNKeys:
+      Users:
+         - !Ref 'CloudAdminUser'
+  CloudAdminKeys:
     Type: AWS::IAM::AccessKey
     Properties:
-      UserName: !Ref 'CFNUser'
+      UserName: !Ref 'CloudAdminUser'
 Outputs:
   AccessKey:
-    Value: !Ref 'CFNKeys'
+    Value: !Ref 'CloudAdminKeys'
     Description: AWSAccessKeyId of new user
   SecretKey:
-    Value: !GetAtt [CFNKeys, SecretAccessKey]
+    Value: !GetAtt [CloudAdminKeys, SecretAccessKey]
     Description: AWSSecretAccessKey of new user
