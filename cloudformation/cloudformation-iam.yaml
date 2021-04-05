@@ -1,21 +1,66 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Metadata:
   License: Apache-2.0
-Description: 'CloudAdmin To Fill IN!!!!'
+Description: 'Permissions required by CloudAdmin for AWS services'
 Resources:
   CloudAdminUser:
     Type: AWS::IAM::User
   CloudAdminPolicies:
     Type: AWS::IAM::Policy
     Properties:
-      PolicyName: CloudAdminPolicy
+      PolicyName: CloudAdminServicesPolicy
       PolicyDocument:
         Statement:
-        - Effect: Allow
-          Action: ["aws-portal:ViewBilling","aws-portal:ViewUsage","autoscaling:Describe*","cloudwatch:Describe*","cloudwatch:Get*","cloudwatch:List*","ec2:Describe*","elasticache:Describe*","elasticache:ListTagsForResource","elasticloadbalancing:Describe*","redshift:Describe*","route53:Get*","route53:List*","rds:Describe*","rds:ListTagsForResource","ec2:DescribeAccountAttributes","ec2:DescribeAvailabilityZones","ec2:DescribeInternetGateways","ec2:DescribeSecurityGroups","ec2:DescribeSubnets","ec2:DescribeVpcAttribute","ec2:DescribeVpcs","cloudwatch:GetMetricStatistics","logs:DescribeLogStreams","logs:GetLogEvents","es:DescribeReservedElasticsearchInstanceOfferings","es:ListElasticsearchInstanceTypeDetails","es:ESHttpGet","es:ListTags","es:DescribeElasticsearchDomainConfig","es:GetUpgradeHistory","es:ESCrossClusterGet","es:DescribeInboundCrossClusterSearchConnections","es:DescribeReservedElasticsearchInstances","es:ESHttpHead","es:ListDomainNames","es:DescribeElasticsearchDomain","es:GetCompatibleElasticsearchVersions","es:GetUpgradeStatus","es:DescribeElasticsearchDomains","es:ListElasticsearchInstanceTypes","es:DescribeOutboundCrossClusterSearchConnections","es:ListElasticsearchVersions","es:DescribeElasticsearchInstanceTypeLimits"]
-          Resource: '*'
+          - Effect: Allow
+            Action: [
+                "aws-portal:ViewBilling",
+                "aws-portal:ViewUsage",
+                "autoscaling:Describe*",
+                "cloudwatch:Describe*",
+                "cloudwatch:Get*",
+                "cloudwatch:List*",
+                "ec2:Describe*",
+                "elasticache:Describe*",
+                "elasticache:ListTagsForResource",
+                "elasticloadbalancing:Describe*",
+                "redshift:Describe*",
+                "route53:Get*",
+                "route53:List*",
+                "rds:Describe*",
+                "rds:ListTagsForResource",
+                "ec2:DescribeAccountAttributes",
+                "ec2:DescribeAvailabilityZones",
+                "ec2:DescribeInternetGateways",
+                "ec2:DescribeSecurityGroups",
+                "ec2:DescribeSubnets",
+                "ec2:DescribeVpcAttribute",
+                "ec2:DescribeVpcs",
+                "cloudwatch:GetMetricStatistics",
+                "logs:DescribeLogStreams",
+                "logs:GetLogEvents",
+                "es:DescribeReservedElasticsearchInstanceOfferings",
+                "es:ListElasticsearchInstanceTypeDetails",
+                "es:ESHttpGet",
+                "es:ListTags",
+                "es:DescribeElasticsearchDomainConfig",
+                "es:GetUpgradeHistory",
+                "es:ESCrossClusterGet",
+                "es:DescribeInboundCrossClusterSearchConnections",
+                "es:DescribeReservedElasticsearchInstances",
+                "es:ESHttpHead",
+                "es:ListDomainNames",
+                "es:DescribeElasticsearchDomain",
+                "es:GetCompatibleElasticsearchVersions",
+                "es:GetUpgradeStatus",
+                "es:DescribeElasticsearchDomains",
+                "es:ListElasticsearchInstanceTypes",
+                "es:DescribeOutboundCrossClusterSearchConnections",
+                "es:ListElasticsearchVersions",
+                "es:DescribeElasticsearchInstanceTypeLimits"
+            ]
+            Resource: '*'
       Users:
-         - !Ref 'CloudAdminUser'
+        - !Ref 'CloudAdminUser'
   CloudAdminKeys:
     Type: AWS::IAM::AccessKey
     Properties:
@@ -25,5 +70,5 @@ Outputs:
     Value: !Ref 'CloudAdminKeys'
     Description: AWSAccessKeyId of new user
   SecretKey:
-    Value: !GetAtt [CloudAdminKeys, SecretAccessKey]
+    Value: !GetAtt [ CloudAdminKeys, SecretAccessKey ]
     Description: AWSSecretAccessKey of new user
