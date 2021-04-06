@@ -12,8 +12,7 @@ Resources:
       PolicyDocument:
         Statement:
           - Effect: Allow
-            Action:
-              [
+            Action: [
                 "cloudwatch:Describe*",
                 "cloudwatch:Get*",
                 "cloudwatch:List*",
@@ -45,8 +44,7 @@ Resources:
                 "redshift:ResumeCluster",
                 "savingsplans:CreateSavingsPlan",
                 "savingsplans:Describe*",
-                "sts:GetCallerIdentity"
-              ]
+                "sts:GetCallerIdentity" ]
             Resource: "*"
       Users:
         - !Ref "CloudAdminUser"
