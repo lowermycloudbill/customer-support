@@ -1,7 +1,7 @@
-AWSTemplateFormatVersion: '2010-09-09'
+AWSTemplateFormatVersion: "2010-09-09"
 Metadata:
   License: Apache-2.0
-Description: 'CloudFormation template for CloudAdmin onboarding. This will create an IAM role, custom policy apply that to the IAM role, and also give the IAM role the proper read only policy for the cost & usage report.'
+Description: "CloudFormation template for CloudAdmin onboarding. This will create an IAM role, custom policy apply that to the IAM role, and also give the IAM role the proper read only policy for the cost & usage report."
 Resources:
   CloudAdminUser:
     Type: AWS::IAM::User
@@ -11,29 +11,75 @@ Resources:
       PolicyName: CloudAdminIAMPolicy
       PolicyDocument:
         Statement:
-        - Effect: Allow
-          Action: ["aws-portal:ViewBilling","aws-portal:ViewUsage","autoscaling:Describe*","cloudwatch:Describe*","cloudwatch:Get*","cloudwatch:List*","ec2:Describe*","elasticache:Describe*","elasticache:ListTagsForResource","elasticloadbalancing:Describe*","redshift:Describe*","route53:Get*","route53:List*","rds:Describe*","rds:ListTagsForResource","ec2:DescribeAccountAttributes","ec2:DescribeAvailabilityZones","ec2:DescribeInternetGateways","ec2:DescribeSecurityGroups","ec2:DescribeSubnets","ec2:DescribeVpcAttribute","ec2:DescribeVpcs","cloudwatch:GetMetricStatistics","logs:DescribeLogStreams","logs:GetLogEvents","es:DescribeReservedElasticsearchInstanceOfferings","es:ListElasticsearchInstanceTypeDetails","es:ESHttpGet","es:ListTags","es:DescribeElasticsearchDomainConfig","es:GetUpgradeHistory","es:ESCrossClusterGet","es:DescribeInboundCrossClusterSearchConnections","es:DescribeReservedElasticsearchInstances","es:ESHttpHead","es:ListDomainNames","es:DescribeElasticsearchDomain","es:GetCompatibleElasticsearchVersions","es:GetUpgradeStatus","es:DescribeElasticsearchDomains","es:ListElasticsearchInstanceTypes","es:DescribeOutboundCrossClusterSearchConnections","es:ListElasticsearchVersions","es:DescribeElasticsearchInstanceTypeLimits"]
-          Resource: '*'
+          - Effect: Allow
+            Action:
+              [
+                "aws-portal:ViewBilling",
+                "aws-portal:ViewUsage",
+                "autoscaling:Describe*",
+                "cloudwatch:Describe*",
+                "cloudwatch:Get*",
+                "cloudwatch:List*",
+                "ec2:Describe*",
+                "elasticache:Describe*",
+                "elasticache:ListTagsForResource",
+                "elasticloadbalancing:Describe*",
+                "redshift:Describe*",
+                "route53:Get*",
+                "route53:List*",
+                "rds:Describe*",
+                "rds:ListTagsForResource",
+                "ec2:DescribeAccountAttributes",
+                "ec2:DescribeAvailabilityZones",
+                "ec2:DescribeInternetGateways",
+                "ec2:DescribeSecurityGroups",
+                "ec2:DescribeSubnets",
+                "ec2:DescribeVpcAttribute",
+                "ec2:DescribeVpcs",
+                "cloudwatch:GetMetricStatistics",
+                "logs:DescribeLogStreams",
+                "logs:GetLogEvents",
+                "es:DescribeReservedElasticsearchInstanceOfferings",
+                "es:ListElasticsearchInstanceTypeDetails",
+                "es:ESHttpGet",
+                "es:ListTags",
+                "es:DescribeElasticsearchDomainConfig",
+                "es:GetUpgradeHistory",
+                "es:ESCrossClusterGet",
+                "es:DescribeInboundCrossClusterSearchConnections",
+                "es:DescribeReservedElasticsearchInstances",
+                "es:ESHttpHead",
+                "es:ListDomainNames",
+                "es:DescribeElasticsearchDomain",
+                "es:GetCompatibleElasticsearchVersions",
+                "es:GetUpgradeStatus",
+                "es:DescribeElasticsearchDomains",
+                "es:ListElasticsearchInstanceTypes",
+                "es:DescribeOutboundCrossClusterSearchConnections",
+                "es:ListElasticsearchVersions",
+                "es:DescribeElasticsearchInstanceTypeLimits",
+              ]
+            Resource: "*"
       Users:
-         - !Ref 'CloudAdminUser'
+        - !Ref "CloudAdminUser"
   CloudAdminS3Policy:
     Type: AWS::IAM::Policy
     Properties:
       PolicyName: CloudAdminS3Policy
       PolicyDocument:
         Statement:
-        - Effect: Allow
-          Action: ["s3:ListBucket","s3:GetObjectVersion"]
-          Resource: 'arn:aws:s3:::test/*'
+          - Effect: Allow
+            Action: ["s3:ListBucket", "s3:GetObjectVersion"]
+            Resource: "arn:aws:s3:::test/*"
       Users:
-         - !Ref 'CloudAdminUser'
+        - !Ref "CloudAdminUser"
   CloudAdminKeys:
     Type: AWS::IAM::AccessKey
     Properties:
-      UserName: !Ref 'CloudAdminUser'
+      UserName: !Ref "CloudAdminUser"
 Outputs:
   AccessKey:
-    Value: !Ref 'CloudAdminKeys'
+    Value: !Ref "CloudAdminKeys"
     Description: AWSAccessKeyId of new user
   SecretKey:
     Value: !GetAtt [CloudAdminKeys, SecretAccessKey]
