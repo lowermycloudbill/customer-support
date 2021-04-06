@@ -55,8 +55,8 @@ Resources:
       PolicyDocument:
         Statement:
           - Effect: Allow
-            Action: ["s3:ListBucket", "s3:GetObjectVersion"]
-            Resource: "arn:aws:s3:::test/*"
+            Action: ["s3:ListBucket", "s3:GetObject", "s3:GetObjectVersion"]
+            Resource: "arn:aws:s3:::*/*"
       Users:
         - !Ref "CloudAdminUser"
   CloudAdminKeys:
