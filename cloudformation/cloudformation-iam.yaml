@@ -58,6 +58,16 @@ Resources:
                 "es:DescribeOutboundCrossClusterSearchConnections",
                 "es:ListElasticsearchVersions",
                 "es:DescribeElasticsearchInstanceTypeLimits",
+                "savingsplans:DescribeSavingsPlansOfferingRates",
+                "savingsplans:CreateSavingsPlan",
+                "savingsplans:DescribeSavingsPlans",
+                "ec2:StartInstances",
+                "ec2:StopInstances",
+                "rds:StopDBInstance",
+                "rds:StartDBInstance",
+                "redshift:PauseCluster",
+                "redshift:ResumeCluster",
+                "sts:GetCallerIdentity"
               ]
             Resource: "*"
       Users:
