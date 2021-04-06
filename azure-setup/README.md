@@ -34,13 +34,13 @@ In order to properly setup Azure to work with CloudAdmin, follow these instructi
                     "*/read",
                     "Microsoft.Compute/virtualMachines/start/action",
                     "Microsoft.Compute/virtualMachines/restart/action",
-                    "Microsoft.Sql/servers/databases/resume/action",
-                    "Microsoft.Sql/servers/databases/pause/action",
                     "Microsoft.Compute/virtualMachines/powerOff/action",
                     "Microsoft.Compute/disks/delete",
+                    "Microsoft.Compute/snapshots/delete",
+                    "Microsoft.Sql/servers/databases/resume/action",
+                    "Microsoft.Sql/servers/databases/pause/action",
                     "Microsoft.Network/loadBalancers/delete",
-                    "Microsoft.Network/publicIPAddresses/delete",
-                    "Microsoft.Compute/snapshots/delete"
+                    "Microsoft.Network/publicIPAddresses/delete"
                ],
                "notActions": [],
                "dataActions": [],
