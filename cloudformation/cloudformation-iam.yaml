@@ -5,6 +5,8 @@ Description: "CloudFormation template for CloudAdmin onboarding. This will creat
 Resources:
   CloudAdminUser:
     Type: AWS::IAM::User
+    Properties:
+      UserName: !Join [ "_", [ "CloudAdminIAM", !Ref "AWS::StackName"]]
   CloudAdminIAMPolicy:
     Type: AWS::IAM::Policy
     Properties:
