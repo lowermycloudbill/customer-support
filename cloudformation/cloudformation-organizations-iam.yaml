@@ -1,0 +1,130 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Metadata:
+  License: Apache-2.0
+Description: "CloudFormation template for CloudAdmin onboarding for users using AWS Organizations. This will create an IAM role, custom policy apply that to the IAM role, and also give the IAM role the proper read only policy for the cost & usage report."
+Resources:
+  CloudAdminUser:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: !Join [ "_", [ "CloudAdminOrganizationIAM", !Ref "AWS::StackName", !Ref "AWS::AccountId" ] ]
+  CloudAdminIAMPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: CloudAdminIAMPolicy
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Action: [
+              "organizations:ListAccounts",
+              "sts:AssumeRole",
+              "sts:GetCallerIdentity" ]
+            Resource: "*"
+      Users:
+        - !Ref "CloudAdminUser"
+  CloudAdminKeys:
+    Type: AWS::IAM::AccessKey
+    Properties:
+      UserName: !Ref "CloudAdminUser"
+  ListAccounts: #Custom Resource
+    Type: Custom::ListAccounts
+    DependsOn: "CloudAdminIAMPolicy"
+    Properties:
+      ServiceToken:
+        Fn::GetAtt:
+          - ListAccountsFunction  #Reference to Function to be run
+          - Arn                   #ARN of the function to be run
+      Input1:
+        Ref: CloudAdminKeys
+      Input2:
+        Fn::GetAtt:
+          - CloudAdminKeys
+          - SecretAccessKey
+      Input3:
+        Ref: AWS::AccountId
+  ListAccountsFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: "Listing Organization account ids"
+      Role:
+        Fn::GetAtt:
+          - LambdaExecutionRole
+          - Arn
+      Runtime: python3.8
+      Timeout: 30
+      Handler: index.lambda_handler
+      Code:
+        ZipFile:
+          Fn::Sub: |-
+            #!/usr/bin/env python3
+
+            import cfnresponse
+            import logging
+            import traceback
+
+            LOGGER = logging.getLogger()
+            LOGGER.setLevel(logging.INFO)
+
+            def lambda_handler(event, context):
+                LOGGER.info('Event structure: %s', event)
+                LOGGER.info('Resources: %s', event['ResourceProperties'])
+
+                access_key = event['ResourceProperties']['Input1']
+                secret_key = event['ResourceProperties']['Input2']
+                root_account = event['ResourceProperties']['Input3']
+
+                import boto3
+                organizations_client = boto3.client('organizations', aws_access_key_id=access_key, aws_secret_access_key=secret_key)
+                sts_client = boto3.client('sts', aws_access_key_id=access_key, aws_secret_access_key=secret_key)
+
+                try:
+                    accounts = organizations_client.list_accounts()
+                    LOGGER.info('Accounts: %s', accounts)
+
+                    owner = sts_client.get_caller_identity()
+                    LOGGER.info('Caller: %s', owner)
+
+                    account_ids = []
+                    for account in accounts['Accounts']:
+                        account_id = account['Id']
+                        if account_id == root_account:
+                            continue
+                        account_ids.append(account_id)
+
+                    response_data = {"Ids": account_ids}
+                except Exception as e:
+                    LOGGER.error(e)
+                    traceback.print_exc()
+                    response_data = {}
+                finally:
+                    cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data)
+  LambdaExecutionRole: #IAM Role for Custom Resource
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: "/"
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:aws:logs:*:*:*
+Outputs:
+  AccessKey:
+    Value: !Ref "CloudAdminKeys"
+    Description: AWSAccessKeyId of new user
+  SecretKey:
+    Value: !GetAtt [CloudAdminKeys, SecretAccessKey]
+    Description: AWSSecretAccessKey of new user
