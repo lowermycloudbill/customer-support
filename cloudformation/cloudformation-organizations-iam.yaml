@@ -7,10 +7,10 @@ Resources:
     Type: AWS::IAM::User
     Properties:
       UserName: !Join [ "_", [ "CloudAdminOrganizationIAM", !Ref "AWS::StackName", !Ref "AWS::AccountId" ] ]
-  CloudAdminIAMPolicy:
+  CloudAdminOrganizationIAMPolicy:
     Type: AWS::IAM::Policy
     Properties:
-      PolicyName: CloudAdminIAMPolicy
+      PolicyName: CloudAdminOrganizationIAMPolicy
       PolicyDocument:
         Statement:
           - Effect: Allow
@@ -25,14 +25,14 @@ Resources:
     Type: AWS::IAM::AccessKey
     Properties:
       UserName: !Ref "CloudAdminUser"
-  ListAccounts: #Custom Resource
+  ListAccounts:
     Type: Custom::ListAccounts
-    DependsOn: "CloudAdminIAMPolicy"
+    DependsOn: "CloudAdminOrganizationIAMPolicy"
     Properties:
       ServiceToken:
         Fn::GetAtt:
-          - ListAccountsFunction  #Reference to Function to be run
-          - Arn                   #ARN of the function to be run
+          - ListAccountsFunction
+          - Arn
       Input1:
         Ref: CloudAdminKeys
       Input2:
@@ -97,6 +97,59 @@ Resources:
                     response_data = {}
                 finally:
                     cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data)
+  CreateIAMs:
+    Type: Custom::CreateIAMs
+    DependsOn: "ListAccounts"
+    Properties:
+      ServiceToken:
+        Fn::GetAtt:
+          - CreateIAMsFunction
+          - Arn
+      Input1:
+        Ref: CloudAdminKeys
+      Input2:
+        Fn::GetAtt:
+          - CloudAdminKeys
+          - SecretAccessKey
+      Input3:
+        Fn::GetAtt:
+          - ListAccounts
+          - Ids
+  CreateIAMsFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: "Creates IAM policies for Users in the Organization."
+      Role:
+        Fn::GetAtt:
+          - LambdaExecutionRole
+          - Arn
+      Runtime: python3.8
+      Timeout: 30
+      Handler: index.lambda_handler
+      Code:
+        ZipFile:
+          Fn::Sub: |-
+            #!/usr/bin/env python3
+
+            import cfnresponse
+            import logging
+            import traceback
+
+            LOGGER = logging.getLogger()
+            LOGGER.setLevel(logging.INFO)
+
+            def lambda_handler(event, context):
+                LOGGER.info('Event structure: %s', event)
+                LOGGER.info('Resources: %s', event['ResourceProperties'])
+                access_key = event['ResourceProperties']['Input1']
+                secret_key = event['ResourceProperties']['Input2']
+                accounts = event['ResourceProperties']['Input3']
+                sts_client = boto3.client('sts', aws_access_key_id=access_key, aws_secret_access_key=secret_key)
+                assumed_role_object = sts_client.assume_role(
+                   RoleArn="arn:aws:iam::{}:role/{}".format(account_id, ROLE),
+                   RoleSessionName="LambdaTesting"
+                )
+            # TODO
   LambdaExecutionRole: #IAM Role for Custom Resource
     Type: AWS::IAM::Role
     Properties:
