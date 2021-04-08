@@ -61,7 +61,7 @@ Resources:
       PolicyDocument:
         Statement:
           - Effect: Allow
-            Action: [
+            Action: 
               - organizations:ListAccounts
               - sts:AssumeRole
               - sts:GetCallerIdentity
