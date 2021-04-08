@@ -61,7 +61,7 @@ Resources:
       PolicyDocument:
         Statement:
           - Effect: Allow
-            Action: 
+            Action:
               - organizations:ListAccounts
               - sts:AssumeRole
               - sts:GetCallerIdentity
@@ -77,8 +77,8 @@ Resources:
       AutoDeployment:
         - Enabled: true
       Description: "Applies CloudAdminIAM for each account in the AWS Organization"
-      Parameters:
-        - AccountNumbers: !GetAtt [ListAccounts, Ids]
+      DeploymentTargets:
+        - Accounts: !GetAtt [ListAccounts, Ids]
       PermissionModel: SERVICE_MANAGED
       StackSetName: !Join [ "_", [ "CloudAdminStack", !Ref "AWS::Region" ] ]
       TemplateURL: "https://s3-us-west-2.amazonaws.com/cf-templates-gjdxf8leg5jf-us-west-2/2021098lim-template1vyasj0xqmcd"
