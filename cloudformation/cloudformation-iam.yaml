@@ -52,9 +52,9 @@ Resources:
               - savingsplans:CreateSavingsPlan,
               - savingsplans:Describe*,
               - sts:GetCallerIdentity
-            Resource: '*'
+            Resource: "*"
       Users:
-        - !Ref - CloudAdminUser
+        - !Ref "CloudAdminUser"
 
   CloudAdminS3Policy:
     Type: AWS::IAM::Policy
