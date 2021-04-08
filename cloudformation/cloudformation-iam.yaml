@@ -1,12 +1,17 @@
 AWSTemplateFormatVersion: "2010-09-09"
+
 Metadata:
   License: Apache-2.0
+
 Description: "CloudFormation template for CloudAdmin onboarding. This will create an IAM role, custom policy apply that to the IAM role, and also give the IAM role the proper read only policy for the cost & usage report."
+
 Resources:
+
   CloudAdminUser:
     Type: AWS::IAM::User
     Properties:
-      UserName: !Join [ "_", [ "CloudAdminIAM", !Ref "AWS::StackName"]]
+      UserName: !Join [ "_", [ "CloudAdminIAM", !Ref "AWS::StackName" ] ]
+
   CloudAdminIAMPolicy:
     Type: AWS::IAM::Policy
     Properties:
@@ -14,42 +19,43 @@ Resources:
       PolicyDocument:
         Statement:
           - Effect: Allow
-            Action: [
-                "cloudwatch:Describe*",
-                "cloudwatch:Get*",
-                "cloudwatch:List*",
-                "ec2:DeleteSnapshot",
-                "ec2:DeleteVolume",
-                "ec2:Describe*",
-                "ec2:PurchaseReservedInstancesOffering",
-                "ec2:ReleaseAddress",
-                "ec2:StartInstances",
-                "ec2:StopInstances",
-                "elasticache:Describe*",
-                "elasticache:ListTagsForResource",
-                "elasticache:PurchaseReservedCacheNodesOffering",
-                "elasticloadbalancing:DeleteLoadBalancer",
-                "elasticloadbalancing:Describe*",
-                "es:Describe*",
-                "es:ListDomainNames",
-                "es:ListTags",
-                "es:PurchaseReservedElasticsearchInstanceOffering",
-                "rds:DeleteDBSnapshot",
-                "rds:Describe*",
-                "rds:ListTagsForResource",
-                "rds:PurchaseReservedDBInstancesOffering",
-                "rds:StartDBInstance",
-                "rds:StopDBInstance",
-                "redshift:Describe*",
-                "redshift:PauseCluster",
-                "redshift:PurchaseReservedNodeOffering",
-                "redshift:ResumeCluster",
-                "savingsplans:CreateSavingsPlan",
-                "savingsplans:Describe*",
-                "sts:GetCallerIdentity" ]
-            Resource: "*"
+            Action:
+              - cloudwatch:Describe*,
+              - cloudwatch:Get*,
+              - cloudwatch:List*,
+              - ec2:DeleteSnapshot,
+              - ec2:DeleteVolume,
+              - ec2:Describe*,
+              - ec2:PurchaseReservedInstancesOffering,
+              - ec2:ReleaseAddress,
+              - ec2:StartInstances,
+              - ec2:StopInstances,
+              - elasticache:Describe*,
+              - elasticache:ListTagsForResource,
+              - elasticache:PurchaseReservedCacheNodesOffering,
+              - elasticloadbalancing:DeleteLoadBalancer,
+              - elasticloadbalancing:Describe*,
+              - es:Describe*,
+              - es:ListDomainNames,
+              - es:ListTags,
+              - es:PurchaseReservedElasticsearchInstanceOffering,
+              - rds:DeleteDBSnapshot,
+              - rds:Describe*,
+              - rds:ListTagsForResource,
+              - rds:PurchaseReservedDBInstancesOffering,
+              - rds:StartDBInstance,
+              - rds:StopDBInstance,
+              - redshift:Describe*,
+              - redshift:PauseCluster,
+              - redshift:PurchaseReservedNodeOffering,
+              - redshift:ResumeCluster,
+              - savingsplans:CreateSavingsPlan,
+              - savingsplans:Describe*,
+              - sts:GetCallerIdentity
+            Resource: '*'
       Users:
-        - !Ref "CloudAdminUser"
+        - !Ref - CloudAdminUser
+
   CloudAdminS3Policy:
     Type: AWS::IAM::Policy
     Properties:
@@ -57,10 +63,13 @@ Resources:
       PolicyDocument:
         Statement:
           - Effect: Allow
-            Action: ["s3:ListBucket"]
+            Action:
+              - s3:ListBucket
             Resource: "arn:aws:s3:::billing-data-cloudadmin-testing"
           - Effect: Allow
-            Action: ["s3:GetObject", "s3:GetObjectVersion"]
+            Action:
+              - s3:GetObject
+              - s3:GetObjectVersion
             Resource: "arn:aws:s3:::billing-data-cloudadmin-testing/*"
       Users:
         - !Ref "CloudAdminUser"
@@ -68,10 +77,11 @@ Resources:
     Type: AWS::IAM::AccessKey
     Properties:
       UserName: !Ref "CloudAdminUser"
+
 Outputs:
   AccessKey:
     Value: !Ref "CloudAdminKeys"
     Description: AWSAccessKeyId of new user
   SecretKey:
-    Value: !GetAtt [CloudAdminKeys, SecretAccessKey]
+    Value: !GetAtt [ CloudAdminKeys, SecretAccessKey ]
     Description: AWSSecretAccessKey of new user
