@@ -36,7 +36,7 @@ Resources:
                 Action:
                   - sts:AssumeRole
                 Resource:
-                  - "arn:*:iam::*:role/AWSCloudFormationStackSetExecutionRole"
+                  - "arn:*:iam::*:role/StackSetExecutionRole"
 
   StackSetExecutionRole:
     Type: AWS::IAM::Role
@@ -82,7 +82,75 @@ Resources:
           DeploymentTargets:
             Accounts: !GetAtt [ ListAccounts, Ids ]
       StackSetName: !Join [ "-", [ "CloudAdminStack", !Ref "AWS::Region" ] ]
-      TemplateURL: "https://s3-us-west-2.amazonaws.com/cf-templates-gjdxf8leg5jf-us-west-2/2021098lim-template1vyasj0xqmcd"
+      TemplateBody: |
+        Resources:
+
+          CloudAdminUser:
+            Type: AWS::IAM::User
+            Properties:
+              UserName: !Join [ "_", [ "CloudAdminIAM", !Ref "AWS::StackName" ] ]
+
+          CloudAdminIAMPolicy:
+            Type: AWS::IAM::Policy
+            Properties:
+              PolicyName: CloudAdminIAMPolicy
+              PolicyDocument:
+                Statement:
+                  - Effect: Allow
+                    Action:
+                      - cloudwatch:Describe*
+                      - cloudwatch:Get*
+                      - cloudwatch:List*
+                      - ec2:DeleteSnapshot
+                      - ec2:DeleteVolume
+                      - ec2:Describe*
+                      - ec2:PurchaseReservedInstancesOffering
+                      - ec2:ReleaseAddress
+                      - ec2:StartInstances
+                      - ec2:StopInstances
+                      - elasticache:Describe*
+                      - elasticache:ListTagsForResource
+                      - elasticache:PurchaseReservedCacheNodesOffering
+                      - elasticloadbalancing:DeleteLoadBalancer
+                      - elasticloadbalancing:Describe*
+                      - es:Describe*
+                      - es:ListDomainNames
+                      - es:ListTags
+                      - es:PurchaseReservedElasticsearchInstanceOffering
+                      - rds:DeleteDBSnapshot
+                      - rds:Describe*
+                      - rds:ListTagsForResource
+                      - rds:PurchaseReservedDBInstancesOffering
+                      - rds:StartDBInstance
+                      - rds:StopDBInstance
+                      - redshift:Describe*
+                      - redshift:PauseCluster
+                      - redshift:PurchaseReservedNodeOffering
+                      - redshift:ResumeCluster
+                      - savingsplans:CreateSavingsPlan
+                      - savingsplans:Describe*
+                      - sts:GetCallerIdentity
+                    Resource: "*"
+              Users:
+                - !Ref "CloudAdminUser"
+
+          CloudAdminS3Policy:
+            Type: AWS::IAM::Policy
+            Properties:
+              PolicyName: CloudAdminS3Policy
+              PolicyDocument:
+                Statement:
+                  - Effect: Allow
+                    Action:
+                      - s3:ListBucket
+                    Resource: "arn:aws:s3:::billing-data-cloudadmin-testing"
+                  - Effect: Allow
+                    Action:
+                      - s3:GetObject
+                      - s3:GetObjectVersion
+                    Resource: "arn:aws:s3:::billing-data-cloudadmin-testing/*"
+              Users:
+                - !Ref "CloudAdminUser"
 
   ListAccounts:
     Type: Custom::ListAccounts
