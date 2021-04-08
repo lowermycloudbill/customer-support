@@ -3,7 +3,7 @@ Metadata:
   License: Apache-2.0
 Description: "CloudFormation template for CloudAdmin onboarding for users using AWS Organizations. This will create an IAM role, custom policy apply that to the IAM role, and also give the IAM role the proper read only policy for the cost & usage report."
 Resources:
-  
+
   CloudAdminUser:
     Type: AWS::IAM::User
     Properties:
@@ -38,10 +38,10 @@ Resources:
                 Resource:
                   - "arn:*:iam::*:role/AWSCloudFormationStackSetExecutionRole"
 
-  AWSCloudFormationStackSetExecutionRole:
+  StackSetExecutionRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: AWSCloudFormationStackSetExecutionRole
+      RoleName: StackSetExecutionRole
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -77,12 +77,13 @@ Resources:
       AutoDeployment:
         Enabled: true
       Description: "Applies CloudAdminIAM for each account in the AWS Organization"
+      ExecutionRoleName: StackSetExecutionRole
       PermissionModel: SERVICE_MANAGED
       StackInstancesGroup:
-        Regions: [ "us-west-2" ]
-        DeploymentTargets:
-          Accounts: !GetAtt [ ListAccounts, Ids ]
-      StackSetName: !Join [ "_", [ "CloudAdminStack", !Ref "AWS::Region" ] ]
+        - Regions: [ "us-west-2" ]
+          DeploymentTargets:
+            Accounts: !GetAtt [ ListAccounts, Ids ]
+      StackSetName: !Join [ "-", [ "CloudAdminStack", !Ref "AWS::Region" ] ]
       TemplateURL: "https://s3-us-west-2.amazonaws.com/cf-templates-gjdxf8leg5jf-us-west-2/2021098lim-template1vyasj0xqmcd"
 
   ListAccounts:
