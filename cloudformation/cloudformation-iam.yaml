@@ -79,9 +79,11 @@ Resources:
       UserName: !Ref "CloudAdminUser"
 
 Outputs:
+
   AccessKey:
     Value: !Ref "CloudAdminKeys"
     Description: AWSAccessKeyId of new user
+
   SecretKey:
     Value: !GetAtt [ CloudAdminKeys, SecretAccessKey ]
     Description: AWSSecretAccessKey of new user
