@@ -62,26 +62,26 @@ Resources:
         Statement:
           - Effect: Allow
             Action: [
-                "organizations:ListAccounts",
-                "sts:AssumeRole",
-                "sts:GetCallerIdentity" ]
+              - organizations:ListAccounts
+              - sts:AssumeRole
+              - sts:GetCallerIdentity
             Resource: "*"
       Users:
         - !Ref "CloudAdminUser"
 
   CloudAdminAccountSet:
     Type: AWS::CloudFormation::StackSet
-    DependsOn: ListAccounts
+    DependsOn: "ListAccounts"
     Properties:
       AdministrationRoleARN: arn:${AWS::Partition}:iam::aws:policy/AdministratorAccess
       AutoDeployment:
         - Enabled: true
       Description: "Applies CloudAdminIAM for each account in the AWS Organization"
       Parameters:
-        - AccountNumbers: !GetAtt[ListAccounts, Ids]
+        - AccountNumbers: !GetAtt [ListAccounts, Ids]
       PermissionModel: SERVICE_MANAGED
-      StackSetName: !Join [ "_", [ "CloudAdminStack", !GetAtt[ListAccounts, Ids], !Ref "AWS::Region" ] ]
-      TemplateURL: https://s3-us-west-2.amazonaws.com/cf-templates-gjdxf8leg5jf-us-west-2/2021098lim-template1vyasj0xqmcd
+      StackSetName: !Join [ "_", [ "CloudAdminStack", !Ref "AWS::Region" ] ]
+      TemplateURL: "https://s3-us-west-2.amazonaws.com/cf-templates-gjdxf8leg5jf-us-west-2/2021098lim-template1vyasj0xqmcd"
 
   ListAccounts:
     Type: Custom::ListAccounts
