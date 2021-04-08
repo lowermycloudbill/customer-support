@@ -3,6 +3,7 @@ Metadata:
   License: Apache-2.0
 Description: "CloudFormation template for CloudAdmin onboarding for users using AWS Organizations. This will create an IAM role, custom policy apply that to the IAM role, and also give the IAM role the proper read only policy for the cost & usage report."
 Resources:
+  
   CloudAdminUser:
     Type: AWS::IAM::User
     Properties:
@@ -37,7 +38,7 @@ Resources:
                 Resource:
                   - "arn:*:iam::*:role/AWSCloudFormationStackSetExecutionRole"
 
-  ExecutionRole:
+  AWSCloudFormationStackSetExecutionRole:
     Type: AWS::IAM::Role
     Properties:
       RoleName: AWSCloudFormationStackSetExecutionRole
@@ -46,8 +47,7 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              AWS:
-                - !Ref "AWS::AccountId"
+              AWS: !GetAtt [AdministrationRole, Arn]
             Action:
               - sts:AssumeRole
       Path: /
@@ -73,13 +73,15 @@ Resources:
     Type: AWS::CloudFormation::StackSet
     DependsOn: "ListAccounts"
     Properties:
-      AdministrationRoleARN: arn:${AWS::Partition}:iam::aws:policy/AdministratorAccess
+      AdministrationRoleARN: !GetAtt [AdministrationRole, Arn]
       AutoDeployment:
-        - Enabled: true
+        Enabled: true
       Description: "Applies CloudAdminIAM for each account in the AWS Organization"
-      DeploymentTargets:
-        - Accounts: !GetAtt [ListAccounts, Ids]
       PermissionModel: SERVICE_MANAGED
+      StackInstancesGroup:
+        Regions: [ "us-west-2" ]
+        DeploymentTargets:
+          Accounts: !GetAtt [ ListAccounts, Ids ]
       StackSetName: !Join [ "_", [ "CloudAdminStack", !Ref "AWS::Region" ] ]
       TemplateURL: "https://s3-us-west-2.amazonaws.com/cf-templates-gjdxf8leg5jf-us-west-2/2021098lim-template1vyasj0xqmcd"
 
@@ -157,7 +159,7 @@ Resources:
                 finally:
                     cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data)
 
-  LambdaExecutionRole: #IAM Role for Custom Resource
+  LambdaExecutionRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -191,3 +193,13 @@ Outputs:
   SecretKey:
     Value: !GetAtt [CloudAdminKeys, SecretAccessKey]
     Description: AWSSecretAccessKey of new user
+
+  RoleArn:
+    Value: !Ref "AdministrationRole"
+    Description: Role ARN to be used by AssumeRole for new user
+
+  Accounts:
+    Value: !Join
+      - ", "
+      - !GetAtt [ ListAccounts, Ids ]
+    Description: Account Ids processed by StackSet
