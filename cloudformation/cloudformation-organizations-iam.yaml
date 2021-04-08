@@ -17,7 +17,7 @@ Resources:
   AdministrationRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: AWSCloudFormationStackSetAdministrationRole
+      RoleName: !Join [ "_", [ "CloudAdminAdministrationRole", !Ref "AWS::StackName" ] ]
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -74,11 +74,9 @@ Resources:
     DependsOn: "ListAccounts"
     Properties:
       AdministrationRoleARN: !GetAtt [AdministrationRole, Arn]
-      AutoDeployment:
-        Enabled: true
       Description: "Applies CloudAdminIAM for each account in the AWS Organization"
       ExecutionRoleName: StackSetExecutionRole
-      PermissionModel: SERVICE_MANAGED
+      PermissionModel: SELF_MANAGED
       StackInstancesGroup:
         - Regions: [ "us-west-2" ]
           DeploymentTargets:
