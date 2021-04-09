@@ -35,7 +35,7 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              Service: cloudformation.amazonaws.com
+              Service: !Sub "cloudformation.${AWS::URLSuffix}"
             Action:
               - sts:AssumeRole
       Path: /
@@ -48,12 +48,12 @@ Resources:
                 Action:
                   - sts:AssumeRole
                 Resource:
-                  - "arn:*:iam::*:role/StackSetExecutionRole"
+                  - "arn:*:iam::*:role/AWSCloudFormationStackSetExecutionRole"
 
-  StackSetExecutionRole:
+  AWSCloudFormationStackSetExecutionRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: StackSetExecutionRole
+      RoleName: AWSCloudFormationStackSetExecutionRole
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -105,7 +105,6 @@ Resources:
     Properties:
       AdministrationRoleARN: !GetAtt [AdministrationRole, Arn]
       Description: "Applies CloudAdminIAM for each account in the AWS Organization"
-      ExecutionRoleName: StackSetExecutionRole
       PermissionModel: SELF_MANAGED
       StackInstancesGroup:
         - Regions: [ "us-west-2" ]
@@ -118,7 +117,7 @@ Resources:
           CloudAdminUser:
             Type: AWS::IAM::User
             Properties:
-              UserName: !Join [ "_", [ "CloudAdminIAM", !Ref "AWS::StackName" ] ]
+              UserName: !Join [ "_", [ "CloudAdminIAM", !Ref "AWS::AccountId" ] ]
 
           CloudAdminIAMPolicy:
             Type: AWS::IAM::Policy
@@ -216,25 +215,21 @@ Resources:
                 organizations_client = boto3.client('organizations', aws_access_key_id=access_key, aws_secret_access_key=secret_key)
                 sts_client = boto3.client('sts', aws_access_key_id=access_key, aws_secret_access_key=secret_key)
 
+                response_data = {"Ids": []}
+
                 try:
                     accounts = organizations_client.list_accounts()
                     LOGGER.info('Accounts: %s', accounts)
 
-                    owner = sts_client.get_caller_identity()
-                    LOGGER.info('Caller: %s', owner)
-
-                    account_ids = []
                     for account in accounts['Accounts']:
                         account_id = account['Id']
                         if account_id == root_account:
                             continue
-                        account_ids.append(account_id)
+                        response_data['Ids'].append(account_id)
 
-                    response_data = {"Ids": account_ids}
                 except Exception as e:
                     LOGGER.error(e)
                     traceback.print_exc()
-                    response_data = {}
                 finally:
                     cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data)
 
@@ -247,7 +242,7 @@ Resources:
           - Effect: Allow
             Principal:
               Service:
-                - lambda.amazonaws.com
+                - !Sub "lambda.${AWS::URLSuffix}"
             Action:
               - sts:AssumeRole
       Path: /
@@ -273,8 +268,12 @@ Outputs:
     Value: !GetAtt [CloudAdminKeys, SecretAccessKey]
     Description: AWSSecretAccessKey of new user
 
-  RoleArn:
+  Role:
     Value: !Ref "AdministrationRole"
+    Description: Role Name to be used by AssumeRole for new user
+
+  RoleArn:
+    Value: !GetAtt [AdministrationRole, Arn]
     Description: Role ARN to be used by AssumeRole for new user
 
   Accounts:
