@@ -5,6 +5,14 @@ Metadata:
 
 Description: "CloudFormation template for CloudAdmin onboarding. This will create an IAM role, custom policy apply that to the IAM role, and also give the IAM role the proper read only policy for the cost & usage report."
 
+Parameters:
+
+  S3BucketName:
+    Type: String
+    Description: S3 bucket name where the S3 Policy will be applied to.
+    Default: <New Bucket>
+    AllowedPattern: ".+"
+
 Resources:
 
   CloudAdminUser:
@@ -65,12 +73,12 @@ Resources:
           - Effect: Allow
             Action:
               - s3:ListBucket
-            Resource: "arn:aws:s3:::billing-data-cloudadmin-testing"
+            Resource: !Sub "arn:aws:s3:::${S3BucketName}"
           - Effect: Allow
             Action:
               - s3:GetObject
               - s3:GetObjectVersion
-            Resource: "arn:aws:s3:::billing-data-cloudadmin-testing/*"
+            Resource: !Sub "arn:aws:s3:::${S3BucketName}/*"
       Users:
         - !Ref "CloudAdminUser"
   CloudAdminKeys:
