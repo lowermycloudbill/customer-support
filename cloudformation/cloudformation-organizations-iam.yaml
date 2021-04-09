@@ -1,7 +1,19 @@
 AWSTemplateFormatVersion: "2010-09-09"
+
 Metadata:
   License: Apache-2.0
+
 Description: "CloudFormation template for CloudAdmin onboarding for users using AWS Organizations. This will create an IAM role, custom policy apply that to the IAM role, and also give the IAM role the proper read only policy for the cost & usage report."
+
+
+Parameters:
+
+  S3BucketName:
+    Type: String
+    Description: S3 bucket name where the S3 Policy will be applied to.
+    Default: <New Bucket>
+    AllowedPattern: ".+"
+
 Resources:
 
   CloudAdminUser:
@@ -69,6 +81,24 @@ Resources:
       Users:
         - !Ref "CloudAdminUser"
 
+  CloudAdminOrganizationS3Policy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: CloudAdminOrganizationS3Policy
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:ListBucket
+            Resource: !Sub "arn:aws:s3:::${S3BucketName}"
+          - Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:GetObjectVersion
+            Resource: !Sub "arn:aws:s3:::${S3BucketName}/*"
+      Users:
+        - !Ref "CloudAdminUser"
+
   CloudAdminAccountSet:
     Type: AWS::CloudFormation::StackSet
     DependsOn: "ListAccounts"
@@ -131,24 +161,6 @@ Resources:
                       - savingsplans:Describe*
                       - sts:GetCallerIdentity
                     Resource: "*"
-              Users:
-                - !Ref "CloudAdminUser"
-
-          CloudAdminS3Policy:
-            Type: AWS::IAM::Policy
-            Properties:
-              PolicyName: CloudAdminS3Policy
-              PolicyDocument:
-                Statement:
-                  - Effect: Allow
-                    Action:
-                      - s3:ListBucket
-                    Resource: "arn:aws:s3:::billing-data-cloudadmin-testing"
-                  - Effect: Allow
-                    Action:
-                      - s3:GetObject
-                      - s3:GetObjectVersion
-                    Resource: "arn:aws:s3:::billing-data-cloudadmin-testing/*"
               Users:
                 - !Ref "CloudAdminUser"
 
