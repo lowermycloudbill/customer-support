@@ -59,7 +59,7 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              AWS: !GetAtt [AdministrationRole, Arn]
+              AWS: !GetAtt [ListAccounts, OwnerAccountId]
             Action:
               - sts:AssumeRole
       Path: /
@@ -177,8 +177,6 @@ Resources:
         Fn::GetAtt:
           - CloudAdminKeys
           - SecretAccessKey
-      Input3:
-        Ref: AWS::AccountId
 
   ListAccountsFunction:
     Type: AWS::Lambda::Function
@@ -209,13 +207,17 @@ Resources:
 
                 access_key = event['ResourceProperties']['Input1']
                 secret_key = event['ResourceProperties']['Input2']
-                root_account = event['ResourceProperties']['Input3']
 
                 import boto3
                 organizations_client = boto3.client('organizations', aws_access_key_id=access_key, aws_secret_access_key=secret_key)
                 sts_client = boto3.client('sts', aws_access_key_id=access_key, aws_secret_access_key=secret_key)
 
-                response_data = {"Ids": []}
+                owner = sts_client.get_caller_identity()
+                LOGGER.info('Caller: %s', owner)
+
+                owner_account = owner['Account']
+
+                response_data = {"Ids": [], "OwnerAccountId": owner_account}
 
                 try:
                     accounts = organizations_client.list_accounts()
@@ -223,7 +225,7 @@ Resources:
 
                     for account in accounts['Accounts']:
                         account_id = account['Id']
-                        if account_id == root_account:
+                        if account_id == owner_account:
                             continue
                         response_data['Ids'].append(account_id)
 
@@ -276,8 +278,12 @@ Outputs:
     Value: !GetAtt [AdministrationRole, Arn]
     Description: Role ARN to be used by AssumeRole for new user
 
+  Owner:
+    Value: !GetAtt [ListAccounts, OwnerAccountId]
+    Description: Owner Account Id
+
   Accounts:
     Value: !Join
       - ", "
-      - !GetAtt [ ListAccounts, Ids ]
+      - !GetAtt [ListAccounts, Ids]
     Description: Account Ids processed by StackSet
