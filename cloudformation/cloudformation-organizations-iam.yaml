@@ -40,15 +40,13 @@ Resources:
               - sts:AssumeRole
       Path: /
       Policies:
-        - PolicyName: AssumeRole-AWSCloudFormationStackSetExecutionRole
+        - PolicyName: AWSCloudFormationStackSetAdministrationPolicy
           PolicyDocument:
-            Version: 2012-10-17
+            Version: "2012-10-17"
             Statement:
-              - Effect: Allow
-                Action:
-                  - sts:AssumeRole
-                Resource:
-                  - "arn:*:iam::*:role/AWSCloudFormationStackSetExecutionRole"
+              - Effect: "Allow"
+                Action: "*"
+                Resource: "*"
 
   AWSCloudFormationStackSetExecutionRole:
     Type: AWS::IAM::Role
@@ -64,8 +62,20 @@ Resources:
             Action:
               - sts:AssumeRole
       Path: /
-      ManagedPolicyArns:
-        - !Sub arn:${AWS::Partition}:iam::aws:policy/AdministratorAccess
+      Policies:
+        - PolicyName: AWSCloudFormationStackSetExecutionRolePolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action: "cloudformation:*"
+                Resource: "*"
+              - Effect: "Allow"
+                Action: "iam:*"
+                Resource: "*"
+              - Effect: "Allow"
+                Action: "lambda:InvokeFunction"
+                Resource: "*"
 
   CloudAdminOrganizationIAMPolicy:
     Type: AWS::IAM::Policy
