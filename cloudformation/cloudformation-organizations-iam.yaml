@@ -5,7 +5,6 @@ Metadata:
 
 Description: "CloudFormation template for CloudAdmin onboarding for users using AWS Organizations. This will create an IAM role, custom policy apply that to the IAM role, and also give the IAM role the proper read only policy for the cost & usage report."
 
-
 Parameters:
 
   S3BucketName:
@@ -48,35 +47,6 @@ Resources:
                 Action: "*"
                 Resource: "*"
 
-  AWSCloudFormationStackSetExecutionRole:
-    Type: AWS::IAM::Role
-    DependsOn: "ListAccounts"
-    Properties:
-      RoleName: AWSCloudFormationStackSetExecutionRole
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              AWS: !GetAtt [ListAccounts, Ids]
-            Action:
-              - sts:AssumeRole
-      Path: /
-      Policies:
-        - PolicyName: AWSCloudFormationStackSetExecutionRolePolicy
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: "Allow"
-                Action: "cloudformation:*"
-                Resource: "*"
-              - Effect: "Allow"
-                Action: "iam:*"
-                Resource: "*"
-              - Effect: "Allow"
-                Action: "lambda:InvokeFunction"
-                Resource: "*"
-
   CloudAdminOrganizationIAMPolicy:
     Type: AWS::IAM::Policy
     Properties:
@@ -112,13 +82,15 @@ Resources:
 
   CloudAdminAccountSet:
     Type: AWS::CloudFormation::StackSet
-    DependsOn: "AWSCloudFormationStackSetExecutionRole"
+    DependsOn: "ListAccounts"
     Properties:
       Description: "Applies CloudAdminIAM for each account in the AWS Organization"
       PermissionModel: SELF_MANAGED
       OperationPreferences:
-        FailureToleranceCount: 2
+        FailureTolerancePercentage: 90
         MaxConcurrentCount: 2
+      Capabilities:
+        - CAPABILITY_NAMED_IAM
       StackInstancesGroup:
         - Regions: [ "us-west-2" ]
           DeploymentTargets:
