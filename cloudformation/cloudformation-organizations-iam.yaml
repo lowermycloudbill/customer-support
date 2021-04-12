@@ -29,7 +29,7 @@ Resources:
   AdministrationRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Join [ "_", [ "CloudAdminAdministrationRole", !Ref "AWS::StackName" ] ]
+      RoleName: AWSCloudFormationStackSetAdministrationRole
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -52,6 +52,7 @@ Resources:
 
   AWSCloudFormationStackSetExecutionRole:
     Type: AWS::IAM::Role
+    DependsOn: "ListAccounts"
     Properties:
       RoleName: AWSCloudFormationStackSetExecutionRole
       AssumeRolePolicyDocument:
@@ -59,7 +60,7 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              AWS: !GetAtt [ListAccounts, OwnerAccountId]
+              AWS: !GetAtt [ListAccounts, Ids]
             Action:
               - sts:AssumeRole
       Path: /
@@ -101,7 +102,7 @@ Resources:
 
   CloudAdminAccountSet:
     Type: AWS::CloudFormation::StackSet
-    DependsOn: "ListAccounts"
+    DependsOn: "ExecutionRole"
     Properties:
       AdministrationRoleARN: !GetAtt [AdministrationRole, Arn]
       Description: "Applies CloudAdminIAM for each account in the AWS Organization"
