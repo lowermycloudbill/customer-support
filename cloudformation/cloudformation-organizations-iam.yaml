@@ -112,11 +112,13 @@ Resources:
 
   CloudAdminAccountSet:
     Type: AWS::CloudFormation::StackSet
-    DependsOn: "ExecutionRole"
+    DependsOn: "AWSCloudFormationStackSetExecutionRole"
     Properties:
-      AdministrationRoleARN: !GetAtt [AdministrationRole, Arn]
       Description: "Applies CloudAdminIAM for each account in the AWS Organization"
       PermissionModel: SELF_MANAGED
+      OperationPreferences:
+        FailureToleranceCount: 10
+        MaxConcurrentCount: 2
       StackInstancesGroup:
         - Regions: [ "us-west-2" ]
           DeploymentTargets:
