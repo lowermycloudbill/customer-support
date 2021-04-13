@@ -11,6 +11,7 @@ Parameters:
     Type: String
     Description: S3 bucket name where the S3 Policy will be applied to.
     AllowedPattern: ".+"
+    minLength: 1
 
 Resources:
 

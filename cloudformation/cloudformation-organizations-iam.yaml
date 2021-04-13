@@ -11,6 +11,7 @@ Parameters:
     Type: String
     Description: S3 bucket name where the S3 Policy will be applied to.
     AllowedPattern: ".+"
+    MinLength: 1
 
 Resources:
 
@@ -23,28 +24,6 @@ Resources:
     Type: AWS::IAM::AccessKey
     Properties:
       UserName: !Ref "CloudAdminUser"
-
-  AdministrationRole:
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: AWSCloudFormationStackSetAdministrationRole
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: !Sub "cloudformation.${AWS::URLSuffix}"
-            Action:
-              - sts:AssumeRole
-      Path: /
-      Policies:
-        - PolicyName: AWSCloudFormationStackSetAdministrationPolicy
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: "Allow"
-                Action: "*"
-                Resource: "*"
 
   CloudAdminOrganizationIAMPolicy:
     Type: AWS::IAM::Policy
@@ -79,171 +58,6 @@ Resources:
       Users:
         - !Ref "CloudAdminUser"
 
-  CloudAdminAccountSet:
-    Type: AWS::CloudFormation::StackSet
-    DependsOn: "ListAccounts"
-    Properties:
-      Description: "Applies CloudAdminIAM for each account in the AWS Organization"
-      PermissionModel: SELF_MANAGED
-      OperationPreferences:
-        FailureTolerancePercentage: 90
-        MaxConcurrentCount: 2
-      Capabilities:
-        - CAPABILITY_NAMED_IAM
-      StackInstancesGroup:
-        - Regions: [ "us-west-2" ]
-          DeploymentTargets:
-            Accounts: !GetAtt [ ListAccounts, Ids ]
-      StackSetName: !Join [ "-", [ "CloudAdminStack", !Ref "AWS::Region" ] ]
-      TemplateBody: |
-        Resources:
-
-          CloudAdminUser:
-            Type: AWS::IAM::User
-            Properties:
-              UserName: !Join [ "_", [ "CloudAdminIAM", !Ref "AWS::AccountId" ] ]
-
-          CloudAdminIAMPolicy:
-            Type: AWS::IAM::Policy
-            Properties:
-              PolicyName: CloudAdminIAMPolicy
-              PolicyDocument:
-                Statement:
-                  - Effect: Allow
-                    Action:
-                      - cloudwatch:Describe*
-                      - cloudwatch:Get*
-                      - cloudwatch:List*
-                      - ec2:DeleteSnapshot
-                      - ec2:DeleteVolume
-                      - ec2:Describe*
-                      - ec2:PurchaseReservedInstancesOffering
-                      - ec2:ReleaseAddress
-                      - ec2:StartInstances
-                      - ec2:StopInstances
-                      - elasticache:Describe*
-                      - elasticache:ListTagsForResource
-                      - elasticache:PurchaseReservedCacheNodesOffering
-                      - elasticloadbalancing:DeleteLoadBalancer
-                      - elasticloadbalancing:Describe*
-                      - es:Describe*
-                      - es:ListDomainNames
-                      - es:ListTags
-                      - es:PurchaseReservedElasticsearchInstanceOffering
-                      - rds:DeleteDBSnapshot
-                      - rds:Describe*
-                      - rds:ListTagsForResource
-                      - rds:PurchaseReservedDBInstancesOffering
-                      - rds:StartDBInstance
-                      - rds:StopDBInstance
-                      - redshift:Describe*
-                      - redshift:PauseCluster
-                      - redshift:PurchaseReservedNodeOffering
-                      - redshift:ResumeCluster
-                      - savingsplans:CreateSavingsPlan
-                      - savingsplans:Describe*
-                      - sts:GetCallerIdentity
-                    Resource: "*"
-              Users:
-                - !Ref "CloudAdminUser"
-
-  ListAccounts:
-    Type: Custom::ListAccounts
-    DependsOn: "CloudAdminOrganizationIAMPolicy"
-    Properties:
-      ServiceToken:
-        Fn::GetAtt:
-          - ListAccountsFunction
-          - Arn
-      Input1:
-        Ref: CloudAdminKeys
-      Input2:
-        Fn::GetAtt:
-          - CloudAdminKeys
-          - SecretAccessKey
-
-  ListAccountsFunction:
-    Type: AWS::Lambda::Function
-    Properties:
-      Description: "Listing Organization account ids"
-      Role:
-        Fn::GetAtt:
-          - LambdaExecutionRole
-          - Arn
-      Runtime: python3.8
-      Timeout: 30
-      Handler: index.lambda_handler
-      Code:
-        ZipFile:
-          Fn::Sub: |-
-            #!/usr/bin/env python3
-
-            import cfnresponse
-            import logging
-            import traceback
-
-            LOGGER = logging.getLogger()
-            LOGGER.setLevel(logging.INFO)
-
-            def lambda_handler(event, context):
-                LOGGER.info('Event structure: %s', event)
-                LOGGER.info('Resources: %s', event['ResourceProperties'])
-
-                access_key = event['ResourceProperties']['Input1']
-                secret_key = event['ResourceProperties']['Input2']
-
-                import boto3
-                organizations_client = boto3.client('organizations', aws_access_key_id=access_key, aws_secret_access_key=secret_key)
-                sts_client = boto3.client('sts', aws_access_key_id=access_key, aws_secret_access_key=secret_key)
-
-                owner = sts_client.get_caller_identity()
-                LOGGER.info('Caller: %s', owner)
-
-                owner_account = owner['Account']
-
-                response_data = {"Ids": [], "OwnerAccountId": owner_account}
-
-                try:
-                    accounts = organizations_client.list_accounts()
-                    LOGGER.info('Accounts: %s', accounts)
-
-                    for account in accounts['Accounts']:
-                        account_id = account['Id']
-                        if account_id == owner_account:
-                            continue
-                        response_data['Ids'].append(account_id)
-
-                except Exception as e:
-                    LOGGER.error(e)
-                    traceback.print_exc()
-                finally:
-                    cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data)
-
-  LambdaExecutionRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - !Sub "lambda.${AWS::URLSuffix}"
-            Action:
-              - sts:AssumeRole
-      Path: /
-      Policies:
-        - PolicyName: root
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - logs:CreateLogGroup
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
-                Resource: arn:aws:logs:*:*:*
-
 Outputs:
 
   AccessKey:
@@ -253,21 +67,3 @@ Outputs:
   SecretKey:
     Value: !GetAtt [CloudAdminKeys, SecretAccessKey]
     Description: AWSSecretAccessKey of new user
-
-  Role:
-    Value: !Ref "AdministrationRole"
-    Description: Role Name to be used by AssumeRole for new user
-
-  RoleArn:
-    Value: !GetAtt [AdministrationRole, Arn]
-    Description: Role ARN to be used by AssumeRole for new user
-
-  Owner:
-    Value: !GetAtt [ListAccounts, OwnerAccountId]
-    Description: Owner Account Id
-
-  Accounts:
-    Value: !Join
-      - ", "
-      - !GetAtt [ListAccounts, Ids]
-    Description: Account Ids processed by StackSet
