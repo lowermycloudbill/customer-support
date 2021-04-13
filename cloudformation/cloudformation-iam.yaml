@@ -11,7 +11,7 @@ Parameters:
     Type: String
     Description: S3 bucket name where the S3 Policy will be applied to.
     AllowedPattern: ".+"
-    minLength: 1
+    MinLength: 1
 
 Resources:
 
@@ -81,6 +81,7 @@ Resources:
             Resource: !Sub "arn:aws:s3:::${S3BucketName}/*"
       Users:
         - !Ref "CloudAdminUser"
+
   CloudAdminKeys:
     Type: AWS::IAM::AccessKey
     Properties:
