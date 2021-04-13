@@ -9,9 +9,10 @@ Parameters:
 
   AdministratorAccountId:
     Type: String
-    Description: Administrator account id which Executor Role will be applied to.
-    Default: <id>
-    AllowedPattern: ".+"
+    Description: AWS Account Id of the administrator account (the account in which StackSets will be created).
+    MaxLength: 12
+    MinLength: 12
+    AllowedPattern: "\d+"
 
 Resources:
 
