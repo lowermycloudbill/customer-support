@@ -9,9 +9,10 @@ Parameters:
 
   S3BucketName:
     Type: String
-    Description: S3 bucket name where the S3 Policy will be applied to.
+    Description: New S3 bucket name for creation.
     AllowedPattern: ".+"
     MinLength: 1
+    Default: <cloudadmin-companyname-billing>
 
 Resources:
 
@@ -24,6 +25,33 @@ Resources:
     Type: AWS::IAM::AccessKey
     Properties:
       UserName: !Ref "CloudAdminUser"
+
+  CloudAdminS3Bucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Properties:
+      BucketName: !Ref S3BucketName
+      AccessControl: BucketOwnerRead
+
+  CloudAdminBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref CloudAdminS3Bucket
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: billingreports.amazonaws.com
+            Action:
+              - s3:GetBucketAcl
+              - s3:GetBucketPolicy
+            Resource: !Sub "arn:aws:s3:::${CloudAdminS3Bucket}"
+          - Effect: Allow
+            Principal:
+              Service: billingreports.amazonaws.com
+            Action:
+              - s3:PutObject
+            Resource: !Sub "arn:aws:s3:::${CloudAdminS3Bucket}/*"
 
   CloudAdminOrganizationIAMPolicy:
     Type: AWS::IAM::Policy
@@ -50,12 +78,12 @@ Resources:
             Action:
               - s3:ListBucket
               - s3:GetBucketLocation
-            Resource: !Sub "arn:aws:s3:::${S3BucketName}"
+            Resource: !Sub "arn:aws:s3:::${CloudAdminS3Bucket}"
           - Effect: Allow
             Action:
               - s3:GetObject
               - s3:GetObjectVersion
-            Resource: !Sub "arn:aws:s3:::${S3BucketName}/*"
+            Resource: !Sub "arn:aws:s3:::${CloudAdminS3Bucket}/*"
           - Effect: Allow
             Action:
               - cur:PutReportDefinition
@@ -149,7 +177,9 @@ Resources:
 
   CostReport:
     Type: Custom::CostReport
-    DependsOn: "CloudAdminS3Policy"
+    DependsOn:
+      - "CloudAdminS3Policy"
+      - "CloudAdminS3Bucket"
     Properties:
       ServiceToken:
         Fn::GetAtt:
@@ -162,26 +192,26 @@ Resources:
           - CloudAdminKeys
           - SecretAccessKey
       Input3:
-        Ref: S3BucketName
+        Ref: CloudAdminS3Bucket
 
 Outputs:
 
   AccessKey:
     Value: !Ref "CloudAdminKeys"
-    Description: AWSAccessKeyId of new user
+    Description: AWS Access Key to be used on CloudAdmin
 
   SecretKey:
-    Value: !GetAtt [CloudAdminKeys, SecretAccessKey]
-    Description: AWSSecretAccessKey of new user
+    Value: !GetAtt [ CloudAdminKeys, SecretAccessKey ]
+    Description: AWS Secret Access Key to be used on CloudAdmin
 
   Bucket:
     Value: !GetAtt [ CostReport, bucket ]
-    Description: Bucket name of the new user
+    Description: Bucket name  to be used on CloudAdmin
 
   BucketPrefix:
     Value: !GetAtt [ CostReport, prefix ]
-    Description: Bucket prefix of the new user
+    Description: Bucket prefix to be used on CloudAdmin
 
   BucketLocation:
     Value: !GetAtt [ CostReport, location ]
-    Description: Location of the bucket
+    Description: Location of the bucket created
