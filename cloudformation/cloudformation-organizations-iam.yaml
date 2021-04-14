@@ -178,7 +178,7 @@ Resources:
   CostReport:
     Type: Custom::CostReport
     DependsOn:
-      - "CloudAdminS3Policy"
+      - "CloudAdminOrganizationS3Policy"
       - "CloudAdminS3Bucket"
     Properties:
       ServiceToken:
