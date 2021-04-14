@@ -73,12 +73,17 @@ Resources:
           - Effect: Allow
             Action:
               - s3:ListBucket
+              - s3:GetBucketLocation
             Resource: !Sub "arn:aws:s3:::${S3BucketName}"
           - Effect: Allow
             Action:
               - s3:GetObject
               - s3:GetObjectVersion
             Resource: !Sub "arn:aws:s3:::${S3BucketName}/*"
+          - Effect: Allow
+            Action:
+              - cur:PutReportDefinition
+            Resource: !Sub "arn:aws:cur:*:${AWS::AccountId}:definition/*"
       Users:
         - !Ref "CloudAdminUser"
 
@@ -86,6 +91,107 @@ Resources:
     Type: AWS::IAM::AccessKey
     Properties:
       UserName: !Ref "CloudAdminUser"
+
+  CostReportFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: "Creates a new daily billing usage report."
+      Role:
+        Fn::GetAtt:
+          - LambdaExecutionRole
+          - Arn
+      Runtime: python3.8
+      Timeout: 30
+      Handler: index.lambda_handler
+      Code:
+        ZipFile:
+          Fn::Sub: |-
+            #!/usr/bin/env python3
+
+            import boto3
+            import uuid
+
+            import cfnresponse
+            import traceback
+
+            def lambda_handler(event, context):
+                access_key = event['ResourceProperties']['Input1']
+                secret_key = event['ResourceProperties']['Input2']
+                bucket = event['ResourceProperties']['Input3']
+
+                location = ''
+
+                try:
+                    s3_client = boto3.client('s3', aws_access_key_id=access_key, aws_secret_access_key=secret_key)
+                    location_response = s3_client.get_bucket_location(Bucket=bucket)
+                    location = location_response['LocationConstraint']
+                except Exception as ex:
+                    print(str(ex))
+
+                prefix = 'cloudadmin-billing'
+                response_data = {'bucket': bucket, 'prefix': prefix, 'location': location}
+                cur_client = boto3.client('cur', region_name='us-east-1', aws_access_key_id=access_key, aws_secret_access_key=secret_key)
+                try:
+                    report = cur_client.put_report_definition(
+                        ReportDefinition={
+                            'ReportName': f'billing-cloudadmin-{uuid.uuid4()}',
+                            'TimeUnit': 'DAILY',
+                            'Format': 'textORcsv',
+                            'AdditionalSchemaElements': [
+                                'RESOURCES'
+                            ],
+                            'Compression': 'GZIP',
+                            'S3Bucket': bucket,
+                            'S3Prefix': prefix,
+                            'S3Region': location,
+                        }
+                    )
+                except Exception as ex:
+                    traceback.print_exc()
+                finally:
+                    cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data)
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - !Sub "lambda.${AWS::URLSuffix}"
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:aws:logs:*:*:*
+
+  CostReport:
+    Type: Custom::CostReport
+    DependsOn: "CloudAdminS3Policy"
+    Properties:
+      ServiceToken:
+        Fn::GetAtt:
+          - CostReportFunction
+          - Arn
+      Input1:
+        Ref: CloudAdminKeys
+      Input2:
+        Fn::GetAtt:
+          - CloudAdminKeys
+          - SecretAccessKey
+      Input3:
+        Ref: S3BucketName
 
 Outputs:
 
@@ -96,3 +202,15 @@ Outputs:
   SecretKey:
     Value: !GetAtt [ CloudAdminKeys, SecretAccessKey ]
     Description: AWSSecretAccessKey of new user
+
+  Bucket:
+    Value: !GetAtt [ CostReport, bucket ]
+    Description: Bucket name of the new user
+
+  BucketPrefix:
+    Value: !GetAtt [ CostReport, prefix ]
+    Description: Bucket prefix of the new user
+
+  BucketLocation:
+    Value: !GetAtt [ CostReport, location ]
+    Description: Location of the bucket
