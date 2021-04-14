@@ -101,7 +101,7 @@ Resources:
           - LambdaExecutionRole
           - Arn
       Runtime: python3.8
-      Timeout: 10
+      Timeout: 30
       Handler: index.lambda_handler
       Code:
         ZipFile:
@@ -109,19 +109,12 @@ Resources:
             #!/usr/bin/env python3
 
             import boto3
+            import uuid
 
-            import logging
             import cfnresponse
             import traceback
 
-            LOGGER = logging.getLogger()
-            LOGGER.setLevel(logging.INFO)
-
-
             def lambda_handler(event, context):
-                LOGGER.info('Event structure: %s', event)
-                LOGGER.info('Resources: %s', event['ResourceProperties'])
-
                 access_key = event['ResourceProperties']['Input1']
                 secret_key = event['ResourceProperties']['Input2']
                 bucket = event['ResourceProperties']['Input3']
@@ -132,18 +125,16 @@ Resources:
                     s3_client = boto3.client('s3', aws_access_key_id=access_key, aws_secret_access_key=secret_key)
                     location_response = s3_client.get_bucket_location(Bucket=bucket)
                     location = location_response['LocationConstraint']
-                    LOGGER.info('Bucket read')
-                    LOGGER.info(location_response)
                 except Exception as ex:
-                    LOGGER.info(str(ex))
+                    print(str(ex))
 
                 prefix = 'cloudadmin-billing'
                 response_data = {'bucket': bucket, 'prefix': prefix, 'location': location}
+                cur_client = boto3.client('cur', region_name='us-east-1', aws_access_key_id=access_key, aws_secret_access_key=secret_key)
                 try:
-                    cur_client = boto3.client('cur', region_name=location, aws_access_key_id=access_key, aws_secret_access_key=secret_key)
                     report = cur_client.put_report_definition(
                         ReportDefinition={
-                            'ReportName': 'billing-data-cloudadmin',
+                            'ReportName': f'billing-cloudadmin-{uuid.uuid4()}',
                             'TimeUnit': 'DAILY',
                             'Format': 'textORcsv',
                             'AdditionalSchemaElements': [
@@ -152,13 +143,10 @@ Resources:
                             'Compression': 'GZIP',
                             'S3Bucket': bucket,
                             'S3Prefix': prefix,
-                            'S3Region': location
+                            'S3Region': location,
                         }
                     )
-                    LOGGER.info('Report created')
-                    LOGGER.info(report)
                 except Exception as ex:
-                    LOGGER.info(str(ex))
                     traceback.print_exc()
                 finally:
                     cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data)
