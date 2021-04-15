@@ -1,0 +1,77 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Metadata:
+  License: Apache-2.0
+
+Description: "CloudFormation template for CloudAdmin onboarding. This will create an IAM role, custom policy apply that to the IAM role, and also give the IAM role the proper read only policy for the sub account of an AWS Organization."
+
+Parameters:
+
+  AdministratorAccountId:
+    Type: String
+    AllowedPattern: "[0-9]+"
+    Description: AWS Account Id of the administrator account.
+    MaxLength: 12
+    MinLength: 12
+
+Resources:
+
+  CloudAdminIAM:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: CloudAdminIAM
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub "${AdministratorAccountId}"
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: CloudAdminIAMRolePolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudwatch:Describe*
+                  - cloudwatch:Get*
+                  - cloudwatch:List*
+                  - ec2:DeleteSnapshot
+                  - ec2:DeleteVolume
+                  - ec2:Describe*
+                  - ec2:PurchaseReservedInstancesOffering
+                  - ec2:ReleaseAddress
+                  - ec2:StartInstances
+                  - ec2:StopInstances
+                  - elasticache:Describe*
+                  - elasticache:ListTagsForResource
+                  - elasticache:PurchaseReservedCacheNodesOffering
+                  - elasticloadbalancing:DeleteLoadBalancer
+                  - elasticloadbalancing:Describe*
+                  - es:Describe*
+                  - es:ListDomainNames
+                  - es:ListTags
+                  - es:PurchaseReservedElasticsearchInstanceOffering
+                  - rds:DeleteDBSnapshot
+                  - rds:Describe*
+                  - rds:ListTagsForResource
+                  - rds:PurchaseReservedDBInstancesOffering
+                  - rds:StartDBInstance
+                  - rds:StopDBInstance
+                  - redshift:Describe*
+                  - redshift:PauseCluster
+                  - redshift:PurchaseReservedNodeOffering
+                  - redshift:ResumeCluster
+                  - savingsplans:CreateSavingsPlan
+                  - savingsplans:Describe*
+                  - sts:GetCallerIdentity
+                Resource: "*"
+
+Outputs:
+
+  Role:
+    Value: !Ref "CloudAdminIAM"
+    Description: Role Name to be used by AssumeRole for new user
