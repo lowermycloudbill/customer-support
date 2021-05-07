@@ -17,7 +17,7 @@ echo "$SUBSCRIPTIONS" | jq -r '(["ID","NAME", "IS_DEFAULT"] | (., map(length*"-"
 echo
 
 while true; do
-  echo -n 'Enter subscription id: '
+  echo -n 'Enter subscription id to use with CloudAdmin: '
   read -r SELECTED_SUBSCRIPTION_ID
 
   SELECTED_SUBSCRIPTION=$(echo "$SUBSCRIPTIONS" | jq -r --arg id "$SELECTED_SUBSCRIPTION_ID" '.[]|select(.id==$id)')
@@ -27,36 +27,48 @@ while true; do
   fi
 done
 
-echo "Press enter to continue.."
-read -r REPLY
+echo
 
 ### Create app registration and assign roles
 
-echo '== Registering app'
-echo '. Creating app registration'
-
 APP_NAME='CloudAdmin.Service.AUTOMATION'
 
-APP_ID=$(az ad app create --display-name "$APP_NAME" --only-show-errors | jq -r '.appId')
+echo "== Checking app $APP_NAME"
+
+APP=$(az ad app list --display-name "$APP_NAME")
+
+if [[ "$APP" != '[]' ]]; then
+  APP_ID=$(jq -r '.[0].appId' <<< "$APP")
+else
+  echo '. Creating app registration'
+  APP_ID=$(az ad app create --display-name "$APP_NAME" --only-show-errors | jq -r '.appId')
+fi
+
+echo ". App registration id: $APP_ID"
+
 APP_SECRET=$(az ad app credential reset --id "$APP_ID" --years 1000 --only-show-errors | jq -r '.password')
 
-APP_SP=$(az ad sp list --query "[?appId=='$APP_ID']" --all | jq -r 'first(.[])')
-if [[ $APP_SP == "" ]]; then
-  echo '. Creating service principal'
-  az ad sp create --id "$APP_ID" -o none
-else
+echo '== Checking app Service Principal'
+APP_SP=$(az ad sp list --query "[?appId=='$APP_ID']" --all | jq 'first(.[])')
+
+if [[ $APP_SP != '' ]]; then
   echo ". Using existing service principal"
+else
+  echo '. Creating service principal'
+  APP_SP=$(az ad sp create --id "$APP_ID")
 fi
+
+SP_ID=$(jq -r '.appId' <<< "$APP_SP")
+echo ". Service Principal id: $SP_ID"
 
 echo '== Searching app permissions for Azure Management Service'
 APP_PERMISSION=$(az ad app permission list-grants --show-resource-name --query "[?resourceDisplayName=='Windows Azure Service Management API'] | [?expiryTime > '$DATE']" | jq '.[0]')
-echo "Permission found: $APP_PERMISSION"
 
-PERMISSION_ID=$("$APP_PERMISSION" | jq '.objectId')
-echo "Permission id: $PERMISSION_ID"
+PERMISSION_ID=$(jq -r '.resourceId' <<< "$APP_PERMISSION")
+echo ". Permission id: $PERMISSION_ID"
 
-echo '. Granting Permissions to app'
-az ad app permission grant --id "$APP_ID" --api "$PERMISSION_ID" -o none
+echo '== Granting Permissions to app'
+az ad app permission grant --id "$APP_ID" --api "$PERMISSION_ID" --expires 1000 -o none
 
 # assign roles to the apps
 echo '== Assigning roles to the app'
@@ -92,12 +104,12 @@ ROLE_DEFINITION="{
 echo '. Checking if custom role exists'
 ROLE_DEFINITION_QUERIED=$(az role definition list --name "$ROLE_NAME")
 
-if [[ "$ROLE_DEFINITION_QUERIED" == "" ]]; then
-  echo '. Creating custom role for CloudAdmin'
-  az role definition create --role-definition "$ROLE_DEFINITION"
-else
+if [[ "$ROLE_DEFINITION_QUERIED" != '[]' ]]; then
   echo '. Updating custom role for CloudAdmin'
-  az role definition update --role-definition "$ROLE_DEFINITION"
+  az role definition update --role-definition "$ROLE_DEFINITION" -o none
+else
+  echo '. Creating custom role for CloudAdmin'
+  az role definition create --role-definition "$ROLE_DEFINITION" -o none
 fi
 
 echo '. Assigning custom role to app'
