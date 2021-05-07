@@ -1,7 +1,12 @@
 #!/bin/bash
 set -e
 
-echo '== Setup'
+DATE=$(date -I)
+echo "Today's date: $DATE"
+echo
+
+echo '== Setup Starting'
+echo
 
 ### Select a subscription
 
@@ -29,7 +34,10 @@ read -r REPLY
 
 echo '== Registering app'
 echo '. Creating app registration'
-APP_ID=$(az ad app create --display-name 'CloudAdmin.Service.AUTOMATION' --only-show-errors | jq -r '.appId')
+
+APP_NAME='CloudAdmin.Service.AUTOMATION'
+
+APP_ID=$(az ad app create --display-name "$APP_NAME" --only-show-errors | jq -r '.appId')
 APP_SECRET=$(az ad app credential reset --id "$APP_ID" --years 1000 --only-show-errors | jq -r '.password')
 
 APP_SP=$(az ad sp list --query "[?appId=='$APP_ID']" --all | jq -r 'first(.[])')
@@ -40,6 +48,16 @@ else
   echo ". Using existing service principal"
 fi
 
+echo '== Searching app permissions for Azure Management Service'
+APP_PERMISSION=$(az ad app permission list-grants --show-resource-name --query "[?resourceDisplayName=='Windows Azure Service Management API'] | [?expiryTime > '$DATE']" | jq '.[0]')
+echo "Permission found: $APP_PERMISSION"
+
+PERMISSION_ID=$("$APP_PERMISSION" | jq '.objectId')
+echo "Permission id: $PERMISSION_ID"
+
+echo '. Granting Permissions to app'
+az ad app permission grant --id "$APP_ID" --api "$PERMISSION_ID" -o none
+
 # assign roles to the apps
 echo '== Assigning roles to the app'
 sleep 8s # a new service principal is not usable for role assignment instantly, neither after couple of seconds.. :)
@@ -47,11 +65,11 @@ sleep 8s # a new service principal is not usable for role assignment instantly, 
 echo '. Assigning Reservation Purchaser role to app'
 az role assignment create --assignee "$APP_ID" --role 'Reservation Purchaser' -o none
 
-NAME="CloudAdminService"
+ROLE_NAME="CloudAdminService"
 
 ROLE_DEFINITION="{
-   \"Name\": \"$NAME\",
-   \"Description\": \"Required permissions for Cloudadmin Services\",
+   \"Name\": \"$ROLE_NAME\",
+   \"Description\": \"Required permissions for CloudAdmin Services\",
    \"IsCustom\": true,
    \"AssignableScopes\": [
        \"/subscriptions/$SELECTED_SUBSCRIPTION_ID\"
@@ -72,9 +90,9 @@ ROLE_DEFINITION="{
 }"
 
 echo '. Checking if custom role exists'
-listing=$(az role definition list --name "$NAME")
+ROLE_DEFINITION_QUERIED=$(az role definition list --name "$ROLE_NAME")
 
-if [ "$listing" ]; then
+if [[ "$ROLE_DEFINITION_QUERIED" == "" ]]; then
   echo '. Creating custom role for CloudAdmin'
   az role definition create --role-definition "$ROLE_DEFINITION"
 else
@@ -83,7 +101,7 @@ else
 fi
 
 echo '. Assigning custom role to app'
-az role assignment create --assignee "$APP_ID" --role "$NAME" -o none
+az role assignment create --assignee "$APP_ID" --role "$ROLE_NAME" -o none
 
 ### Print results
 echo "--------------------------------------------------------------------------------"
