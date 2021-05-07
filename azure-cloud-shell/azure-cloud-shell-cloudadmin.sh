@@ -64,14 +64,12 @@ echo ". Service Principal id: $SP_ID"
 
 echo '== Searching app permissions for Azure Management Service'
 AVAILABLE_PERMISSION=$(az ad app permission list-grants --show-resource-name --query "[?resourceDisplayName=='Windows Azure Service Management API'] | [?expiryTime > '$DATE']" | jq '.[0]')
-echo "$AVAILABLE_PERMISSION"
 
 API_PERMISSION_ID=$(jq -r '.resourceId' <<< "$AVAILABLE_PERMISSION")
 echo ". Permission id: $API_PERMISSION_ID"
 
 echo '== Checking Exposed Permissions on app'
 EXPOSED_PERMISSIONS=$(az ad sp show --id "$APP_ID" | jq '.oauth2Permissions')
-echo "$EXPOSED_PERMISSIONS"
 
 EXPOSED_PERMISSION_ID=$(jq -r '.[0].id' <<< "$EXPOSED_PERMISSIONS")
 echo ". Oauth2 Permission id: $EXPOSED_PERMISSION_ID"
