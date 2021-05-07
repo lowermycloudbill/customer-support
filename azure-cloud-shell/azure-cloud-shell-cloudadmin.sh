@@ -58,17 +58,29 @@ else
   APP_SP=$(az ad sp create --id "$APP_ID")
 fi
 
-SP_ID=$(jq -r '.appId' <<< "$APP_SP")
-echo ". Service Principal id: $SP_ID"
-
 echo '== Searching app permissions for Azure Management Service'
-APP_PERMISSION=$(az ad app permission list-grants --show-resource-name --query "[?resourceDisplayName=='Windows Azure Service Management API'] | [?expiryTime > '$DATE']" | jq '.[0]')
+AVAILABLE_PERMISSION=$(az ad app permission list-grants --show-resource-name --query "[?resourceDisplayName=='Windows Azure Service Management API'] | [?expiryTime > '$DATE']" | jq '.[0]')
 
-PERMISSION_ID=$(jq -r '.resourceId' <<< "$APP_PERMISSION")
-echo ". Permission id: $PERMISSION_ID"
+API_PERMISSION_ID=$(jq -r '.resourceId' <<< "$AVAILABLE_PERMISSION")
+echo ". Permission id: $API_PERMISSION_ID"
 
-echo '== Granting Permissions to app'
-az ad app permission grant --id "$APP_ID" --api "$PERMISSION_ID" --expires 1000 -o none
+echo '== Checking Exposed Permissions on app'
+EXPOSED_PERMISSIONS=$(az ad sp show --id "$APP_ID" | jq '.oauth2Permissions')
+echo "$EXPOSED_PERMISSIONS"
+
+EXPOSED_PERMISSION_ID=$(jq -r '.[0].id' <<< "$EXPOSED_PERMISSIONS")
+echo ". Oauth2 Permission id: $EXPOSED_PERMISSION_ID"
+
+echo '== Checking Added permissions of the app'
+ADDED_PERMISSIONS=$(az ad app permission list --id "$APP_ID")
+
+if [[ "$ADDED_PERMISSIONS" == '[]' ]]; then
+  echo '. Adding permission to the app'
+  az ad app permission add --id "$APP_ID" --api "$API_PERMISSION_ID" --api-permissions "$EXPOSED_PERMISSION_ID=Scope"
+
+  echo '. Granting Permissions to app'
+  az ad app permission grant --id "$APP_ID" --api "$API_PERMISSION_ID" --expires 1000
+fi
 
 # assign roles to the apps
 echo '== Assigning roles to the app'
@@ -79,7 +91,7 @@ az role assignment create --assignee "$APP_ID" --role 'Reservation Purchaser' -o
 
 ROLE_NAME="CloudAdminService"
 
-ROLE_DEFINITION="{
+ROLE_DEFINITION_JSON="{
    \"Name\": \"$ROLE_NAME\",
    \"Description\": \"Required permissions for CloudAdmin Services\",
    \"IsCustom\": true,
@@ -102,21 +114,28 @@ ROLE_DEFINITION="{
 }"
 
 echo '. Checking if custom role exists'
-ROLE_DEFINITION_QUERIED=$(az role definition list --name "$ROLE_NAME")
+ROLE_DEFINITIONS=$(az role definition list --name "$ROLE_NAME")
 
-if [[ "$ROLE_DEFINITION_QUERIED" != '[]' ]]; then
-  echo '. Updating custom role for CloudAdmin'
-  az role definition update --role-definition "$ROLE_DEFINITION" -o none
+if [[ "$ROLE_DEFINITIONS" != '[]' ]]; then
+  ROLE=$(jq '.[0]' <<< "$ROLE_DEFINITIONS")
+  NEW_ACTIONS=$(jq '.Actions' <<< "$ROLE_DEFINITION_JSON")
+  NEW_NOT_ACTIONS=$(jq '.NotActions' <<< "$ROLE_DEFINITION_JSON")
+  UPDATED_ROLE=$(jq ".permissions[0].actions = $NEW_ACTIONS" <<< "$ROLE")
+  UPDATED_ROLE=$(jq ".permissions[0].notActions = $NEW_NOT_ACTIONS" <<< "$UPDATED_ROLE")
+  echo ". Updating existing custom role with defined Actions for CloudAdmin"
+  az role definition update --role-definition "$UPDATED_ROLE" -o none
 else
   echo '. Creating custom role for CloudAdmin'
-  az role definition create --role-definition "$ROLE_DEFINITION" -o none
+  az role definition create --role-definition "$ROLE_DEFINITION_JSON" -o none
 fi
 
 echo '. Assigning custom role to app'
 az role assignment create --assignee "$APP_ID" --role "$ROLE_NAME" -o none
 
-### Print results
 echo "--------------------------------------------------------------------------------"
+
+echo
+
 echo "Save and use the following json to onboard credentials into CloudAdmin"
 cat << EOF
 {
