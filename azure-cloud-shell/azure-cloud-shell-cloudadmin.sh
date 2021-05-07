@@ -38,6 +38,7 @@ echo "== Checking app $APP_NAME"
 APP=$(az ad app list --display-name "$APP_NAME")
 
 if [[ "$APP" != '[]' ]]; then
+  echo ". Using existing app registration"
   APP_ID=$(jq -r '.[0].appId' <<< "$APP")
 else
   echo '. Creating app registration'
@@ -57,9 +58,13 @@ else
   echo '. Creating service principal'
   APP_SP=$(az ad sp create --id "$APP_ID")
 fi
+echo "$APP_SP"
+SP_ID=$(jq -r '.objectId' <<< "$APP_SP")
+echo ". Service Principal id: $SP_ID"
 
 echo '== Searching app permissions for Azure Management Service'
 AVAILABLE_PERMISSION=$(az ad app permission list-grants --show-resource-name --query "[?resourceDisplayName=='Windows Azure Service Management API'] | [?expiryTime > '$DATE']" | jq '.[0]')
+echo "$AVAILABLE_PERMISSION"
 
 API_PERMISSION_ID=$(jq -r '.resourceId' <<< "$AVAILABLE_PERMISSION")
 echo ". Permission id: $API_PERMISSION_ID"
