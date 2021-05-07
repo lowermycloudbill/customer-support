@@ -135,6 +135,12 @@ fi
 echo '. Assigning custom role to app'
 az role assignment create --assignee "$APP_ID" --role "$ROLE_NAME" -o none
 
+# TODO create resource group
+
+# TODO create storage
+
+# TODO export billing data daily to storage
+
 echo "--------------------------------------------------------------------------------"
 
 echo
